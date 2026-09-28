@@ -2,96 +2,76 @@ package com.cluster.dashboard.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1NamespaceList;
+import io.kubernetes.client.openapi.models.V1PodList;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 
 @Service
 @RequiredArgsConstructor
 public class KubernetesApiService {
 
-    private static final String BASE_URL = "http://127.0.0.1:8001";
+    private final ApiClient apiClient;
 
-    //private static final String NAMESPACE = "rd-us-dsivasubramanian";
+    private final ObjectMapper objectMapper =
+            new ObjectMapper();
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    public V1PodList getPods(String namespace) {
 
-    private final HttpClient httpClient =
-            HttpClient.newBuilder()
-                    .version(HttpClient.Version.HTTP_1_1)
-                    .build();
-
-    public JsonNode getPods(String namespace) {
-
-        String url =
-                BASE_URL +
-                        "/api/v1/namespaces/" +
-                        namespace +
-                        "/pods";
-
-        return get(url);
-    }
-
-    public JsonNode getPod(String namespace, String podName) {
-
-        String url =
-                BASE_URL +
-                        "/api/v1/namespaces/" +
-                        namespace +
-                        "/pods/" +
-                        podName;
-
-        return get(url);
-    }
-
-    private JsonNode get(String url) {              //communicates with the k8s api
-
-        HttpRequest request =
-                HttpRequest.newBuilder()
-                        .uri(URI.create(url))
-                        .GET()
-                        .build();
+        CoreV1Api api =
+                new CoreV1Api(apiClient);
 
         try {
 
-            HttpResponse<String> response =
-                    httpClient.send(
-                            request,
-                            HttpResponse.BodyHandlers.ofString()
-                    );
+            return api.listNamespacedPod(
+                    namespace
+            ).execute();
 
-            if (response.statusCode() < 200 ||
-                    response.statusCode() >= 300) {
-
-                throw new RuntimeException(
-                        "Kubernetes API returned HTTP "
-                                + response.statusCode()
-                                + ": "
-                                + response.body()
-                );
-            }
-
-            return objectMapper.readTree(response.body());
-
-        } catch (Exception e) {
+        } catch (ApiException e) {
 
             throw new RuntimeException(
-                    "Failed to contact Kubernetes API",
+                    "Failed to get Pods from Kubernetes API. "
+                            + "HTTP "
+                            + e.getCode()
+                            + ": "
+                            + e.getResponseBody(),
                     e
             );
         }
     }
 
-    public JsonNode getNamespaces() {
+    public V1NamespaceList getNamespaces() {
 
-        String url =
-                BASE_URL +
-                        "/api/v1/namespaces";
+        CoreV1Api api =
+                new CoreV1Api(apiClient);
 
-        return get(url);
+        try {
+
+            return api.listNamespace()
+                    .execute();
+
+        } catch (ApiException e) {
+
+            throw new RuntimeException(
+                    "Failed to get Namespaces from Kubernetes API. "
+                            + "HTTP "
+                            + e.getCode()
+                            + ": "
+                            + e.getResponseBody(),
+                    e
+            );
+        }
+    }
+
+    /*
+     * Kept as a helper in case we need JSON conversion
+     * for Kubernetes API responses later.
+     */
+    public JsonNode toJson(Object object) {
+
+        return objectMapper.valueToTree(object);
     }
 }

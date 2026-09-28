@@ -2,106 +2,58 @@ package com.cluster.dashboard.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.apis.CustomObjectsApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 
 @Service
 @RequiredArgsConstructor
 public class MetricsApiService {
 
-    private static final String BASE_URL = "http://127.0.0.1:8001";
+    private static final String METRICS_GROUP =
+            "metrics.k8s.io";
 
-    //private static final String NAMESPACE = "rd-us-dsivasubramanian";
+    private static final String METRICS_VERSION =
+            "v1beta1";
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final String POD_RESOURCE =
+            "pods";
 
-    private final HttpClient httpClient =
-            HttpClient.newBuilder()
-                    .version(HttpClient.Version.HTTP_1_1)
-                    .build();
+    private final ApiClient apiClient;
 
-    /**
-     * Gets metrics for all Pods in the namespace.
-     *
-     * Used by the namespace overview.
-     */
+    private final ObjectMapper objectMapper =
+            new ObjectMapper();
+
     public JsonNode getPodMetrics(String namespace) {
 
-        String url =
-                BASE_URL +
-                        "/apis/metrics.k8s.io/v1beta1/" +
-                        "namespaces/" +
-                        namespace +
-                        "/pods";
-
-        return get(url);
-    }
-
-    /**
-     * Gets metrics for one specific Pod.
-     *
-     * Used by the Pod details page.
-     */
-    public JsonNode getPodMetrics(String namespace,String podName) {
-
-        String url =
-                BASE_URL +
-                        "/apis/metrics.k8s.io/v1beta1/" +
-                        "namespaces/" +
-                        namespace +
-                        "/pods/" +
-                        podName;
-
-        return get(url);
-    }
-
-    /**
-     * Sends GET request to Metrics API.
-     */
-    private JsonNode get(String url) {              //communicates with k8s metrics api
-
-        HttpRequest request =
-                HttpRequest.newBuilder()
-                        .uri(URI.create(url))
-                        .GET()
-                        .build();
+        CustomObjectsApi api =
+                new CustomObjectsApi(apiClient);
 
         try {
 
-            HttpResponse<String> response =
-                    httpClient.send(
-                            request,
-                            HttpResponse.BodyHandlers.ofString()
-                    );
+            Object response =
+                    api.listNamespacedCustomObject(
+                            METRICS_GROUP,
+                            METRICS_VERSION,
+                            namespace,
+                            POD_RESOURCE
+                    ).execute();
 
-            if (response.statusCode() < 200 ||
-                    response.statusCode() >= 300) {
+            return objectMapper.valueToTree(response);
 
-                throw new RuntimeException(
-                        "Metrics API returned HTTP "
-                                + response.statusCode()
-                                + ": "
-                                + response.body()
-                );
-            }
-
-            //System.out.println(objectMapper.readTree(response.body()));
-
-            return objectMapper.readTree(
-                    response.body()
-            );
-
-        } catch (Exception e) {
+        } catch (ApiException e) {
 
             throw new RuntimeException(
-                    "Failed to contact Metrics API",
+                    "Failed to get Pod metrics from Kubernetes Metrics API. "
+                            + "HTTP "
+                            + e.getCode()
+                            + ": "
+                            + e.getResponseBody(),
                     e
             );
         }
     }
+
 }

@@ -6,75 +6,94 @@ import com.cluster.dashboard.model.PodSummary;
 import com.cluster.dashboard.model.ResourceUsage;
 import com.cluster.dashboard.util.ResourceParser;
 import com.fasterxml.jackson.databind.JsonNode;
+import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1Namespace;
+import io.kubernetes.client.openapi.models.V1NamespaceList;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.openapi.models.V1ResourceRequirements;
+import io.kubernetes.client.custom.Quantity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class NamespaceService {
 
-    //private static final String NAMESPACE ="rd-us-dsivasubramanian";
-
     private final KubernetesApiService kubernetesApiService;
+
     private final MetricsApiService metricsApiService;
+
     private final PodService podService;
 
-    public NamespaceResponse getNamespaceOverview(String namespace) {
+    public NamespaceResponse getNamespaceOverview(
+            String namespace) {
 
         /*
-         * External API calls:
+         * Kubernetes API:
+         *     1 call
          *
-         * 1. Kubernetes API
-         * 2. Metrics API
-         *
-         * Each is called only once.
+         * Metrics API:
+         *     1 call
          */
 
-        JsonNode pods = kubernetesApiService.getPods(namespace);
+        V1PodList pods =
+                kubernetesApiService.getPods(
+                        namespace
+                );
 
-        JsonNode metrics = metricsApiService.getPodMetrics(namespace);
+        JsonNode metrics =
+                metricsApiService.getPodMetrics(
+                        namespace
+                );
 
-        ResourceTotals totals = calculateResourceTotals(pods, metrics);
+        ResourceTotals totals =
+                calculateResourceTotals(
+                        pods,
+                        metrics
+                );
 
         List<PodSummary> podSummaries =
                 podService.createPodSummaries(
-                        pods, metrics
+                        pods,
+                        metrics
                 );
 
         ResourceUsage cpu =
                 new ResourceUsage(
                         ResourceParser.cpuToString(
-                                totals.cpuUsage
+                                totals.cpuUsage()
                         ),
                         ResourceParser.cpuToString(
-                                totals.cpuRequest
+                                totals.cpuRequest()
                         ),
                         ResourceParser.cpuToString(
-                                totals.cpuLimit
+                                totals.cpuLimit()
                         ),
                         ResourceParser.utilization(
-                                totals.cpuUsage,
-                                totals.cpuLimit
+                                totals.cpuUsage(),
+                                totals.cpuLimit()
                         )
                 );
 
         ResourceUsage memory =
                 new ResourceUsage(
                         ResourceParser.memoryToGi(
-                                totals.memoryUsage
+                                totals.memoryUsage()
                         ),
                         ResourceParser.memoryToGi(
-                                totals.memoryRequest
+                                totals.memoryRequest()
                         ),
                         ResourceParser.memoryToGi(
-                                totals.memoryLimit
+                                totals.memoryLimit()
                         ),
                         ResourceParser.utilization(
-                                totals.memoryUsage,
-                                totals.memoryLimit
+                                totals.memoryUsage(),
+                                totals.memoryLimit()
                         )
                 );
 
@@ -100,21 +119,30 @@ public class NamespaceService {
     }
 
     private String findReleaseName(
-            JsonNode pods) {
+            V1PodList pods) {
 
-        for (JsonNode pod :
-                pods.get("items")) {
+        if (pods == null ||
+                pods.getItems() == null) {
 
-            JsonNode labels =
-                    pod.get("metadata")
-                            .get("labels");
+            return "Unknown";
+        }
 
-            if (labels != null &&
-                    labels.has("release")) {
+        for (V1Pod pod :
+                pods.getItems()) {
 
-                return labels
-                        .get("release")
-                        .asText();
+            if (pod.getMetadata() == null ||
+                    pod.getMetadata().getLabels() == null) {
+
+                continue;
+            }
+
+            String release =
+                    pod.getMetadata()
+                            .getLabels()
+                            .get("release");
+
+            if (release != null) {
+                return release;
             }
         }
 
@@ -122,18 +150,25 @@ public class NamespaceService {
     }
 
     private String findIdentityProvider(
-            JsonNode pods) {
+            V1PodList pods) {
 
-        for (JsonNode pod :
-                pods.get("items")) {
+        if (pods == null ||
+                pods.getItems() == null) {
+
+            return "azureAD";
+        }
+
+        for (V1Pod pod :
+                pods.getItems()) {
+
+            if (pod.getMetadata() == null) {
+                continue;
+            }
 
             String podName =
-                    pod.get("metadata")
-                            .get("name")
-                            .asText();
+                    pod.getMetadata().getName();
 
-            if (podName.contains(
-                    "-pub-ms-urel-")) {
+            if (podName != null && (podName.contains("-pub-ms-urel-")) || podName.contains("publishing-method-server")) {
 
                 return "wncsaas";
             }
@@ -150,11 +185,9 @@ public class NamespaceService {
                 + ".rd-us.azure.ptc.com/windchill";
     }
 
-    // Existing calculateResourceTotals() stays here
-    // Existing ResourceTotals record stays here
-
-
-    private ResourceTotals calculateResourceTotals(JsonNode pods, JsonNode metrics) {
+    private ResourceTotals calculateResourceTotals(
+            V1PodList pods,
+            JsonNode metrics) {
 
         long cpuRequest = 0;
         long cpuLimit = 0;
@@ -166,100 +199,118 @@ public class NamespaceService {
         long memoryUsage = 0;
 
         /*
-         * Calculate requests and limits
-         * from Kubernetes Pod specifications.
+         * Requests and limits
+         * come from Pod specifications.
          */
 
-        for (JsonNode pod : pods.get("items")) {
+        if (pods != null &&
+                pods.getItems() != null) {
 
-            for (JsonNode container : pod.get("spec").get("containers")) {
+            for (V1Pod pod :
+                    pods.getItems()) {
 
-                JsonNode resources = container.get("resources");
+                if (pod.getSpec() == null ||
+                        pod.getSpec()
+                                .getContainers() == null) {
 
-                if (resources == null) {
                     continue;
                 }
 
-                JsonNode requests =
-                        resources.get("requests");
+                for (V1Container container :
+                        pod.getSpec()
+                                .getContainers()) {
 
-                JsonNode limits =
-                        resources.get("limits");
+                    V1ResourceRequirements resources = container.getResources();    //the resource property in spec.containers
 
-                if (requests != null) {
-
-                    if (requests.has("cpu")) {
-
-                        cpuRequest +=
-                                ResourceParser
-                                        .parseCpuToMilli(
-                                                requests
-                                                        .get("cpu")
-                                                        .asText()
-                                        );
+                    if (resources == null) {
+                        continue;
                     }
 
-                    if (requests.has("memory")) {
+                    Map<String, Quantity> requests = resources.getRequests();
 
-                        memoryRequest +=
-                                ResourceParser
-                                        .parseMemoryToKi(
-                                                requests
-                                                        .get("memory")
-                                                        .asText()
-                                        );
-                    }
-                }
+                    Map<String, Quantity> limits = resources.getLimits();
 
-                if (limits != null) {
+                    if (requests != null) {
 
-                    if (limits.has("cpu")) {
+                        Quantity cpu = requests.get("cpu");
 
-                        cpuLimit +=
-                                ResourceParser
-                                        .parseCpuToMilli(
-                                                limits
-                                                        .get("cpu")
-                                                        .asText()
-                                        );
+                        Quantity memory = requests.get("memory");
+
+                        if (cpu != null) {
+
+                            cpuRequest += ResourceParser.parseCpu(cpu);
+                        }
+
+                        if (memory != null) {
+
+                            memoryRequest += ResourceParser.parseMemory(memory);
+                        }
                     }
 
-                    if (limits.has("memory")) {
+                    if (limits != null) {
 
-                        memoryLimit +=
-                                ResourceParser
-                                        .parseMemoryToKi(
-                                                limits
-                                                        .get("memory")
-                                                        .asText()
-                                        );
+                        Quantity cpu = limits.get("cpu");
+
+                        Quantity memory = limits.get("memory");
+
+                        if (cpu != null) {
+
+                            cpuLimit += ResourceParser.parseCpu(cpu);
+                        }
+
+                        if (memory != null) {
+
+                            memoryLimit += ResourceParser.parseMemory(memory);
+                        }
                     }
                 }
             }
         }
 
         /*
-         * Calculate actual usage
-         * from Metrics API.
+         * Actual usage comes from Metrics API.
          */
 
-        for (JsonNode pod : metrics.get("items")) {
+        if (metrics != null &&
+                metrics.has("items")) {
 
-            for (JsonNode container : pod.get("containers")) {
+            for (JsonNode pod :
+                    metrics.get("items")) {
 
-                cpuUsage += ResourceParser.parseCpuToMilli(container
-                                                .get("usage")
-                                                .get("cpu")
-                                                .asText());
+                if (!pod.has("containers")) {
+                    continue;
+                }
 
-                memoryUsage +=
-                        ResourceParser
-                                .parseMemoryToKi(
-                                        container
-                                                .get("usage")
-                                                .get("memory")
-                                                .asText()
-                                );
+                for (JsonNode container :
+                        pod.get("containers")) {
+
+                    if (!container.has("usage")) {
+                        continue;
+                    }
+
+                    JsonNode usage =
+                            container.get("usage");
+
+                    if (usage.has("cpu")) {
+
+                        cpuUsage +=
+                                ResourceParser
+                                        .parseCpuToMilli(
+                                                usage.get("cpu")
+                                                        .asText()
+                                        );
+                    }
+
+                    if (usage.has("memory")) {
+
+                        memoryUsage +=
+                                ResourceParser
+                                        .parseMemoryToKi(
+                                                usage.get("memory")
+                                                        .asText()
+                                        );
+                    }
+                }
             }
         }
 
@@ -285,20 +336,25 @@ public class NamespaceService {
 
     public List<NamespaceSummary> getNamespaces() {
 
-        JsonNode namespaces =
-                kubernetesApiService.getNamespaces();
+        V1NamespaceList namespaces =
+                kubernetesApiService
+                        .getNamespaces();
 
         List<NamespaceSummary> result =
                 new ArrayList<>();
 
-        for (JsonNode namespace :
-                namespaces.get("items")) {
+        if (namespaces == null ||
+                namespaces.getItems() == null) {
+
+            return result;
+        }
+
+        for (V1Namespace namespace :
+                namespaces.getItems()) {
 
             String name =
-                    namespace
-                            .get("metadata")
-                            .get("name")
-                            .asText();
+                    namespace.getMetadata()
+                            .getName();
 
             result.add(
                     new NamespaceSummary(name)

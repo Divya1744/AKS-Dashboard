@@ -1,40 +1,47 @@
 package com.cluster.dashboard.service;
 
 import com.cluster.dashboard.model.ContainerDetails;
-import com.cluster.dashboard.model.PodDetails;
 import com.cluster.dashboard.model.PodSummary;
 import com.cluster.dashboard.model.ResourceUsage;
 import com.cluster.dashboard.util.ResourceParser;
 import com.fasterxml.jackson.databind.JsonNode;
+import io.kubernetes.client.custom.Quantity;
+import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1ContainerStatus;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.openapi.models.V1ResourceRequirements;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PodService {
 
     public List<PodSummary> createPodSummaries(
-            JsonNode pods,
+            V1PodList pods,
             JsonNode metrics) {
 
         List<PodSummary> result =
                 new ArrayList<>();
 
-        for (JsonNode pod :
-                pods.get("items")) {
+        if (pods == null ||
+                pods.getItems() == null) {
 
-            String podName =
-                    pod.get("metadata")
-                            .get("name")
-                            .asText();
+            return result;
+        }
+
+        for (V1Pod pod :
+                pods.getItems()) {
 
             JsonNode podMetrics =
                     findPodMetrics(
                             metrics,
-                            podName
+                            pod.getMetadata().getName()
                     );
 
             result.add(
@@ -49,29 +56,27 @@ public class PodService {
     }
 
     public PodSummary createPodSummary(
-            JsonNode pod,
+            V1Pod pod,
             JsonNode metrics) {
 
         String name =
-                pod.get("metadata")
-                        .get("name")
-                        .asText();
+                pod.getMetadata().getName();
 
         String status =
-                pod.get("status")
-                        .get("phase")
-                        .asText();
+                pod.getStatus() != null
+                        ? pod.getStatus().getPhase()
+                        : "Unknown";
 
         String node =
-                pod.get("spec")
-                        .get("nodeName")
-                        .asText();
+                pod.getSpec() != null
+                        ? pod.getSpec().getNodeName()
+                        : null;
 
         String age =
                 calculateAge(
-                        pod.get("metadata")
-                                .get("creationTimestamp")
-                                .asText()
+                        pod.getMetadata()
+                                .getCreationTimestamp()
+                                .toString()
                 );
 
         int restarts =
@@ -93,64 +98,27 @@ public class PodService {
         );
     }
 
-    public PodDetails createPodDetails(
-            JsonNode pod,
+    private List<ContainerDetails> createContainerDetails(
+            V1Pod pod,
             JsonNode metrics) {
 
-        String name =
-                pod.get("metadata")
-                        .get("name")
-                        .asText();
+        List<ContainerDetails> result =
+                new ArrayList<>();
 
-        String status =
-                pod.get("status")
-                        .get("phase")
-                        .asText();
+        if (pod.getSpec() == null ||
+                pod.getSpec().getContainers() == null) {
 
-        String node =
-                pod.get("spec")
-                        .get("nodeName")
-                        .asText();
+            return result;
+        }
 
-        String age =
-                calculateAge(
-                        pod.get("metadata")
-                                .get("creationTimestamp")
-                                .asText()
-                );
-
-        int restarts = getRestartCount(pod);
-
-        List<ContainerDetails> containers = createContainerDetails(pod, metrics);
-
-        System.out.println("Metrics returned to controller: " + metrics);
-
-        return new PodDetails(
-                name,
-                status,
-                age,
-                node,
-                restarts,
-                containers
-        );
-    }
-
-    private List<ContainerDetails> createContainerDetails(JsonNode pod, JsonNode metrics) {
-
-        List<ContainerDetails> result = new ArrayList<>();
-
-        for (JsonNode container : pod.get("spec").get("containers")) {
+        for (V1Container container :
+                pod.getSpec().getContainers()) {
 
             String name =
-                    container.get("name")
-                            .asText();
+                    container.getName();
 
             String image =
-                    container.get("image")
-                            .asText();
-
-            JsonNode resources =
-                    container.get("resources");
+                    container.getImage();
 
             long cpuRequest = 0;
             long cpuLimit = 0;
@@ -158,97 +126,92 @@ public class PodService {
             long memoryRequest = 0;
             long memoryLimit = 0;
 
+            V1ResourceRequirements resources =
+                    container.getResources();
+
             if (resources != null) {
 
-                JsonNode requests =
-                        resources.get("requests");
+                Map<String, Quantity> requests =
+                        resources.getRequests();
 
-                JsonNode limits =
-                        resources.get("limits");
+                Map<String, Quantity> limits =
+                        resources.getLimits();
 
                 if (requests != null) {
 
                     cpuRequest =
-                            getCpu(
-                                    requests,
-                                    "cpu"
+                            parseCpu(
+                                    requests.get("cpu")
                             );
 
                     memoryRequest =
-                            getMemory(
-                                    requests,
-                                    "memory"
+                            parseMemory(
+                                    requests.get("memory")
                             );
                 }
 
                 if (limits != null) {
 
                     cpuLimit =
-                            getCpu(
-                                    limits,
-                                    "cpu"
+                            parseCpu(
+                                    limits.get("cpu")
                             );
 
                     memoryLimit =
-                            getMemory(
-                                    limits,
-                                    "memory"
+                            parseMemory(
+                                    limits.get("memory")
                             );
                 }
             }
 
-            long cpuUsage =
-                    getContainerCpuUsage(
+            JsonNode metricContainer =
+                    findMetricContainer(
                             metrics,
                             name
                     );
 
+            long cpuUsage =
+                    getCpuUsage(
+                            metricContainer
+                    );
+
             long memoryUsage =
-                    getContainerMemoryUsage(
-                            metrics,
-                            name
+                    getMemoryUsage(
+                            metricContainer
                     );
 
             ResourceUsage cpu =
                     new ResourceUsage(
-                            ResourceParser
-                                    .cpuToString(
-                                            cpuUsage
-                                    ),
-                            ResourceParser
-                                    .cpuToString(
-                                            cpuRequest
-                                    ),
-                            ResourceParser
-                                    .cpuToString(
-                                            cpuLimit
-                                    ),
-                            ResourceParser
-                                    .utilization(
-                                            cpuUsage,
-                                            cpuLimit
-                                    )
+                            ResourceParser.cpuToString(
+                                    cpuUsage
+                            ),
+                            ResourceParser.cpuToString(
+                                    cpuRequest
+                            ),
+                            ResourceParser.cpuToString(
+                                    cpuLimit
+                            ),
+                            ResourceParser.utilization(
+                                    cpuUsage,
+                                    cpuLimit
+                            )
                     );
 
             ResourceUsage memory =
                     new ResourceUsage(
-                            ResourceParser
-                                    .memoryToGi(
-                                            memoryUsage
-                                    ),
-                            ResourceParser
-                                    .memoryToGi(
-                                            memoryRequest
-                                    ),
-                            ResourceParser
-                                    .memoryToGi(
-                                            memoryLimit
-                                    ),
-                            ResourceParser
-                                    .utilization(
-                                            memoryUsage,
-                                            memoryLimit
-                                    )
+                            ResourceParser.memoryToGi(
+                                    memoryUsage
+                            ),
+                            ResourceParser.memoryToGi(
+                                    memoryRequest
+                            ),
+                            ResourceParser.memoryToGi(
+                                    memoryLimit
+                            ),
+                            ResourceParser.utilization(
+                                    memoryUsage,
+                                    memoryLimit
+                            )
                     );
 
             result.add(
@@ -264,128 +227,121 @@ public class PodService {
         return result;
     }
 
-    private long getCpu(
-            JsonNode resources,
-            String field) {
+    private long parseCpu(Quantity quantity) {
+        return ResourceParser.parseCpu(quantity);
+    }
 
-        if (!resources.has(field)) {
+    private long parseMemory(Quantity quantity) {
+        return ResourceParser.parseMemory(quantity);
+    }
+
+    private long getCpuUsage(
+            JsonNode container) {
+
+        if (container == null ||
+                !container.has("usage") ||
+                !container.get("usage")
+                        .has("cpu")) {
+
             return 0;
         }
 
         return ResourceParser.parseCpuToMilli(
-                resources.get(field).asText()
-        );
-    }
-
-    private long getMemory(
-            JsonNode resources,
-            String field) {
-
-        if (!resources.has(field)) {
-            return 0;
-        }
-
-        return ResourceParser.parseMemoryToKi(
-                resources.get(field).asText()
-        );
-    }
-
-    private int getRestartCount(
-            JsonNode pod) {
-
-        JsonNode statuses =
-                pod.get("status")
-                        .get("containerStatuses");
-
-        if (statuses == null) {
-            return 0;
-        }
-
-        int total = 0;
-
-        for (JsonNode container :
-                statuses) {
-
-            total += container
-                    .get("restartCount")
-                    .asInt();
-        }
-
-        return total;
-    }
-
-    private long getContainerCpuUsage(
-            JsonNode metrics,
-            String containerName) {
-
-        System.out.println(
-                "Looking for container: " + containerName
-        );
-
-        System.out.println(
-                "Metrics JSON: " + metrics
-        );
-
-        JsonNode container =
-                findMetricContainer(
-                        metrics,
-                        containerName
-                );
-
-        System.out.println(
-                "Found container: " + container
-        );
-
-        if (container == null) {
-            return 0;
-        }
-
-        return ResourceParser.parseCpuToMilli(
-                container
-                        .get("usage")
+                container.get("usage")
                         .get("cpu")
                         .asText()
         );
     }
 
-    private long getContainerMemoryUsage(
-            JsonNode metrics,
-            String containerName) {
+    private long getMemoryUsage(
+            JsonNode container) {
 
-        JsonNode container =
-                findMetricContainer(
-                        metrics,
-                        containerName
-                );
+        if (container == null ||
+                !container.has("usage") ||
+                !container.get("usage")
+                        .has("memory")) {
 
-        if (container == null) {
             return 0;
         }
 
         return ResourceParser.parseMemoryToKi(
-                container
-                        .get("usage")
+                container.get("usage")
                         .get("memory")
                         .asText()
         );
     }
 
-    private JsonNode findMetricContainer(
+    private int getRestartCount(
+            V1Pod pod) {
+
+        if (pod.getStatus() == null ||
+                pod.getStatus()
+                        .getContainerStatuses() == null) {
+
+            return 0;
+        }
+
+        int total = 0;
+
+        for (V1ContainerStatus status :
+                pod.getStatus()
+                        .getContainerStatuses()) {
+
+            if (status.getRestartCount() != null) {
+
+                total +=
+                        status.getRestartCount();
+            }
+        }
+
+        return total;
+    }
+
+    private JsonNode findPodMetrics(
             JsonNode metrics,
-            String containerName) {
+            String podName) {
 
         if (metrics == null ||
-                !metrics.has("containers")) {
+                !metrics.has("items")) {
+
+            return null;
+        }
+
+        for (JsonNode pod :
+                metrics.get("items")) {
+
+            if (pod.has("metadata") &&
+                    pod.get("metadata")
+                            .has("name") &&
+                    pod.get("metadata")
+                            .get("name")
+                            .asText()
+                            .equals(podName)) {
+
+                return pod;
+            }
+        }
+
+        return null;
+    }
+
+    private JsonNode findMetricContainer(
+            JsonNode podMetrics,
+            String containerName) {
+
+        if (podMetrics == null ||
+                !podMetrics.has("containers")) {
 
             return null;
         }
 
         for (JsonNode container :
-                metrics.get("containers")) {
+                podMetrics.get("containers")) {
 
-            if (container.get("name")
-                    .asText()
-                    .equals(containerName)) {
+            if (container.has("name") &&
+                    container.get("name")
+                            .asText()
+                            .equals(containerName)) {
 
                 return container;
             }
@@ -426,30 +382,5 @@ public class PodService {
         }
 
         return minutes + "m";
-    }
-
-    private JsonNode findPodMetrics(
-            JsonNode metrics,
-            String podName) {
-
-        if (metrics == null ||
-                !metrics.has("items")) {
-
-            return null;
-        }
-
-        for (JsonNode pod :
-                metrics.get("items")) {
-
-            if (pod.get("metadata")
-                    .get("name")
-                    .asText()
-                    .equals(podName)) {
-
-                return pod;
-            }
-        }
-
-        return null;
     }
 }

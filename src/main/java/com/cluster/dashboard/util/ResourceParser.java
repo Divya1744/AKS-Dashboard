@@ -31,30 +31,30 @@ public final class ResourceParser {
         }
 
         if (cpu.endsWith("n")) {
+            double nanoCores = Double.parseDouble(
+                    cpu.substring(0, cpu.length() - 1)
+            );
 
-            long nanoCores =
-                    Long.parseLong(
-                            cpu.substring(
-                                    0,
-                                    cpu.length() - 1
-                            )
-                    );
+            return Math.round(nanoCores / 1_000_000);
+        }
 
-            return nanoCores / 1_000_000;
+        if (cpu.endsWith("u")) {
+            double microCores = Double.parseDouble(
+                    cpu.substring(0, cpu.length() - 1)
+            );
+
+            return Math.round(microCores / 1000);
         }
 
         if (cpu.endsWith("m")) {
-
             return Long.parseLong(
-                    cpu.substring(
-                            0,
-                            cpu.length() - 1
-                    )
+                    cpu.substring(0, cpu.length() - 1)
             );
         }
 
-        return (long)
-                (Double.parseDouble(cpu) * 1000);
+        return Math.round(
+                Double.parseDouble(cpu) * 1000
+        );
     }
 
     public static long parseMemoryToKi(

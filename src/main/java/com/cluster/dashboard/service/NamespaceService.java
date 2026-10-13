@@ -103,8 +103,7 @@ public class NamespaceService {
         String identityProvider =
                 findIdentityProvider(pods);
 
-        String windchillUrl =
-                buildWindchillUrl(namespace);
+        String windchillUrl = kubernetesApiService.getWindchillUrl(namespace);
 
         return new NamespaceResponse(
                 namespace,
@@ -182,7 +181,7 @@ public class NamespaceService {
 
         return "http://"
                 + namespace
-                + ".rd-us.azure.ptc.com/windchill";
+                + ".rd-us.azure.ptc.com/Windchill/app/";
     }
 
     private ResourceTotals calculateResourceTotals(

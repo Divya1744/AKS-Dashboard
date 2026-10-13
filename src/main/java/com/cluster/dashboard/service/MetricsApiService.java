@@ -56,4 +56,29 @@ public class MetricsApiService {
         }
     }
 
+    public JsonNode getNodeMetrics() {
+
+        CustomObjectsApi api =
+                new CustomObjectsApi(apiClient);
+
+        try {
+
+            Object response =
+                    api.listClusterCustomObject(
+                            METRICS_GROUP,
+                            METRICS_VERSION,
+                            "nodes"
+                    ).execute();
+
+            return objectMapper.valueToTree(response);
+
+        } catch (ApiException e) {
+
+            throw new RuntimeException(
+                    "Failed to get Node metrics from Kubernetes Metrics API. "
+                            + "HTTP " + e.getCode()
+                            + ": " + e.getResponseBody(), e);
+        }
+    }
+
 }

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PTC Windchill | Cluster Dashboard</title>
+  
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="navbar-brand">
+      <div class="brand-logo">
+        <img src="ptc-windchill-500x500.webp" alt="PTC Windchill Logo" class="brand-img" height="200px" width="200px"/>
+      </div>
+      <div class="brand-text">
+        <span class="brand-subtitle" id="nav-cluster-title" style="cursor: pointer;" title="Back to Cluster Overview">plm-rd-us</span>
+      </div>
+    </div>
+
+    <div class="navbar-actions">
+      <button id="btn-refresh" class="btn btn-secondary" title="Refresh Data">
+        <svg class="icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Application Layout -->
+  <div class="app-layout">
+    
+    <!-- Sidebar: Namespace Explorer -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <div class="sidebar-title-group">
+            <h2 class="sidebar-heading" id="sidebar-cluster-link" style="cursor: pointer;" title="Click to view Cluster Overview">Namespaces</h2>
+            
+          </div>
+          <span class="badge badge-muted" id="namespace-count">0</span>
+        </div>
+
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="namespace-search" placeholder="Filter namespaces..." autocomplete="off" />
+        </div>
+      </div>
+
+      <nav class="namespace-nav" id="namespace-list">
+        <!-- Rendered via JS -->
+      </nav>
+    </aside>
+
+    <!-- Main Workspace Content Area -->
+    <main class="content-panel" id="main-content">
+      <!-- Rendered dynamically via JS -->
+    </main>
+
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

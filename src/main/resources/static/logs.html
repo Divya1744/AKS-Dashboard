@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Container Logs | Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --term-bg: #0d1117;
+      --term-header: #161b22;
+      --term-border: #30363d;
+      --term-text: #c9d1d9;
+      --term-text-dim: #8b949e;
+      --term-green: #2ea043;
+      --term-red: #f85149;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--term-bg);
+      color: var(--term-text);
+      font-family: 'JetBrains Mono', monospace;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header.term-navbar {
+      background-color: var(--term-header);
+      border-bottom: 1px solid var(--term-border);
+      padding: 0.65rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .term-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .term-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .term-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+
+    .dot-red { background-color: #ff5f56; }
+    .dot-yellow { background-color: #ffbd2e; }
+    .dot-green { background-color: #27c93f; }
+
+    .term-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .pill {
+      background-color: #21262d;
+      border: 1px solid var(--term-border);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      color: var(--term-text);
+    }
+
+    .pill-green {
+      color: #3fb950;
+      border-color: rgba(63, 185, 80, 0.3);
+      background-color: rgba(63, 185, 80, 0.1);
+    }
+
+    .term-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: 'Inter', sans-serif;
+    }
+
+    select.term-select {
+      background-color: #21262d;
+      border: 1px solid var(--term-border);
+      color: var(--term-text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    button.btn-refresh {
+      background-color: #238636;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background-color 0.2s;
+    }
+
+    button.btn-refresh:hover {
+      background-color: #2ea043;
+    }
+
+    button.btn-refresh:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    main.term-viewport {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: auto;
+      padding: 1rem 1.25rem;
+      background-color: var(--term-bg);
+      font-size: 0.825rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    footer.term-status {
+      background-color: var(--term-header);
+      border-top: 1px solid var(--term-border);
+      padding: 0.4rem 1.25rem;
+      font-size: 0.75rem;
+      color: var(--term-text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .loading-state, .error-state {
+      padding: 2rem 0;
+      text-align: center;
+      color: var(--term-text-dim);
+    }
+
+    .error-state {
+      color: var(--term-red);
+    }
+
+    .rotate {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="term-navbar">
+    <div class="term-title-group">
+      
+      <div class="term-meta">
+        <span class="pill" id="meta-ns">namespace</span>
+        <span style="color: var(--term-text-dim);">/</span>
+        <span class="pill" id="meta-pod">pod</span>
+        <span style="color: var(--term-text-dim);">/</span>
+        <span class="pill pill-green" id="meta-container">container</span>
+      </div>
+    </div>
+
+    <div class="term-controls">
+      <select id="tail-select" class="term-select" title="Tail lines">
+        <option value="100">Tail: 100 lines</option>
+        <option value="500" selected>Tail: 500 lines</option>
+        <option value="1000">Tail: 1000 lines</option>
+        <option value="2000">Tail: 2000 lines</option>
+      </select>
+
+      <button id="btn-refresh-logs" class="btn-refresh">
+        <svg id="refresh-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="term-viewport" id="terminal-content">
+    <div class="loading-state">Connecting to API and loading container logs...</div>
+  </main>
+
+  <footer class="term-status">
+    <div>Snapshot Telemetry &bull; Non-realtime</div>
+    <div id="status-timestamp">Last updated: —</div>
+  </footer>
+
+  <script>
+    const API_BASE = 'http://localhost:8080/api';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const cluster = urlParams.get('cluster') || 'plm-rd-us';
+    const namespace = urlParams.get('namespace');
+    const pod = urlParams.get('pod');
+    const container = urlParams.get('container');
+
+    const dom = {
+      metaNs: document.getElementById('meta-ns'),
+      metaPod: document.getElementById('meta-pod'),
+      metaContainer: document.getElementById('meta-container'),
+      viewport: document.getElementById('terminal-content'),
+      tailSelect: document.getElementById('tail-select'),
+      btnRefresh: document.getElementById('btn-refresh-logs'),
+      refreshIcon: document.getElementById('refresh-icon'),
+      statusTimestamp: document.getElementById('status-timestamp')
+    };
+
+    document.title = `Logs: ${container || 'Container'} | ${pod || 'Pod'}`;
+    dom.metaNs.textContent = namespace || 'default';
+    dom.metaPod.textContent = pod || 'unknown-pod';
+    dom.metaContainer.textContent = container || 'unknown-container';
+
+    async function fetchLogs() {
+      if (!namespace || !pod || !container) {
+        dom.viewport.innerHTML = '<div class="error-state">Missing required query parameters: namespace, pod, or container.</div>';
+        return;
+      }
+
+      const tailLines = dom.tailSelect.value || 500;
+      dom.btnRefresh.disabled = true;
+      dom.refreshIcon.classList.add('rotate');
+
+      // Append timestamp query parameter to prevent browser & proxy caching
+      const timestamp = Date.now();
+      const url = `${API_BASE}/clusters/${encodeURIComponent(cluster)}/namespaces/${encodeURIComponent(namespace)}/pods/${encodeURIComponent(pod)}/containers/${encodeURIComponent(container)}/logs?tailLines=${tailLines}&_t=${timestamp}`;
+
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          cache: 'no-store', // Disable browser disk/memory cache
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const text = await response.text();
+
+        if (!text || text.trim() === '') {
+          dom.viewport.innerHTML = '<div class="loading-state" style="color: var(--term-text-dim);">[Empty log: No lines returned for this container]</div>';
+        } else {
+          dom.viewport.textContent = text;
+          // Auto-scroll to the bottom of latest logs
+          dom.viewport.scrollTop = dom.viewport.scrollHeight;
+        }
+
+        const now = new Date();
+        dom.statusTimestamp.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+      } catch (err) {
+        dom.viewport.innerHTML = `<div class="error-state">Failed to fetch logs: ${err.message}</div>`;
+      } finally {
+        dom.btnRefresh.disabled = false;
+        dom.refreshIcon.classList.remove('rotate');
+      }
+    }
+
+    dom.btnRefresh.addEventListener('click', (e) => {
+      e.preventDefault();
+      fetchLogs();
+    });
+
+    dom.tailSelect.addEventListener('change', fetchLogs);
+
+    fetchLogs();
+  </script>
+</body>
+</html>

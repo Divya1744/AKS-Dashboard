@@ -176,13 +176,13 @@ public class NamespaceService {
         return "azureAD";
     }
 
-    private String buildWindchillUrl(
+    /** private String buildWindchillUrl(
             String namespace) {
 
         return "http://"
                 + namespace
                 + ".rd-us.azure.ptc.com/Windchill/app/";
-    }
+    } */
 
     private ResourceTotals calculateResourceTotals(
             V1PodList pods,

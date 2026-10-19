@@ -20,7 +20,7 @@ public class KubernetesClientConfig {
             "octopus";
 
     @Bean
-    public ApiClient kubernetesApiClient()
+    public ApiClient kubernetesApiClient()      //creates a singleton api client
             throws IOException {
 
         KubeConfig kubeConfig =

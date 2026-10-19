@@ -108,10 +108,6 @@ public class KubernetesApiService {
                                 || service.startsWith(
                                 WINDCHILL_SERVICE + "." + namespace + "."
                         );
-                System.out.println("Namespace: " + namespace);
-                System.out.println("Service: " + service);
-                System.out.println("Hostname: [" + hostname + "]");
-                System.out.println("Mapping: " + mapping.toPrettyString());
 
                 if (matchesService && !hostname.isBlank()) {
                     return hostname;

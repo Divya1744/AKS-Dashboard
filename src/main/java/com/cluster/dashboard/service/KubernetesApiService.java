@@ -1,16 +1,13 @@
 package com.cluster.dashboard.service;
 
+import com.cluster.dashboard.config.SessionKubernetesClientProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.apis.CustomObjectsApi;
 import io.kubernetes.client.openapi.apis.VersionApi;
-import io.kubernetes.client.openapi.models.V1NamespaceList;
-import io.kubernetes.client.openapi.models.V1NodeList;
-import io.kubernetes.client.openapi.models.V1PodList;
-import io.kubernetes.client.openapi.models.VersionInfo;
+import io.kubernetes.client.openapi.models.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +15,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class KubernetesApiService {
 
-    private final ApiClient apiClient;
+    //private final ApiClient apiClient;
+    private final SessionKubernetesClientProvider clientProvider;
     private static final String WINDCHILL_SERVICE = "ms-service-windchill-0";
 
     private static final String MAPPING_GROUP = "getambassador.io";
@@ -42,7 +40,8 @@ public class KubernetesApiService {
 
     private boolean hasWindchillService(String namespace) {
 
-        CoreV1Api api = new CoreV1Api(apiClient);
+        //CoreV1Api api = new CoreV1Api(apiClient);
+        CoreV1Api api = new CoreV1Api(clientProvider.getApiClient());
 
         try {
             api.readNamespacedService(
@@ -72,7 +71,9 @@ public class KubernetesApiService {
 
     private String getWindchillHostname(String namespace) {
 
-        CustomObjectsApi api = new CustomObjectsApi(apiClient);
+        //CustomObjectsApi api = new CustomObjectsApi(apiClient);
+        CustomObjectsApi api =
+                new CustomObjectsApi(clientProvider.getApiClient());
 
         try {
             Object response = api.listNamespacedCustomObject(
@@ -133,8 +134,8 @@ public class KubernetesApiService {
 
     public V1PodList getPods(String namespace) {
 
-        CoreV1Api api =
-                new CoreV1Api(apiClient);
+        //CoreV1Api api = new CoreV1Api(apiClient);
+        CoreV1Api api = new CoreV1Api(clientProvider.getApiClient());
 
         try {
 
@@ -155,7 +156,7 @@ public class KubernetesApiService {
         }
     }
 
-    public V1NamespaceList getNamespaces() {
+    /** public V1NamespaceList getNamespaces() {
 
         CoreV1Api api =
                 new CoreV1Api(apiClient);
@@ -176,12 +177,48 @@ public class KubernetesApiService {
                     e
             );
         }
+    } */
+
+    public V1NamespaceList getNamespaces() {
+
+        //CoreV1Api api = new CoreV1Api(apiClient);
+        CoreV1Api api = new CoreV1Api(clientProvider.getApiClient());
+
+        try {
+            V1NamespaceList allNamespaces = api.listNamespace().execute();
+
+            V1NamespaceList windchillNamespaces = new V1NamespaceList();
+            windchillNamespaces.setApiVersion(allNamespaces.getApiVersion());
+            windchillNamespaces.setKind(allNamespaces.getKind());
+            windchillNamespaces.setMetadata(allNamespaces.getMetadata());
+
+            for (V1Namespace namespace : allNamespaces.getItems()) {
+
+                String namespaceName = namespace.getMetadata().getName();
+
+                if (hasWindchillService(namespaceName)) {
+                    windchillNamespaces.addItemsItem(namespace);
+                }
+            }
+
+            return windchillNamespaces;
+
+        } catch (ApiException e) {
+            throw new RuntimeException(
+                    "Failed to get Namespaces from Kubernetes API. HTTP "
+                            + e.getCode()
+                            + ": "
+                            + e.getResponseBody(),
+                    e
+            );
+        }
     }
 
 
     public V1NodeList getNodes() {
 
-        CoreV1Api api = new CoreV1Api(apiClient);
+        //CoreV1Api api = new CoreV1Api(apiClient);
+        CoreV1Api api = new CoreV1Api(clientProvider.getApiClient());
 
         try {
             return api.listNode().execute();
@@ -196,7 +233,8 @@ public class KubernetesApiService {
 
     public V1PodList getAllPods() {
 
-        CoreV1Api api = new CoreV1Api(apiClient);
+        //CoreV1Api api = new CoreV1Api(apiClient);
+        CoreV1Api api = new CoreV1Api(clientProvider.getApiClient());
 
         try {
             return api.listPodForAllNamespaces().execute();
@@ -211,7 +249,8 @@ public class KubernetesApiService {
 
     public String getKubernetesVersion() {
 
-        VersionApi api = new VersionApi(apiClient);
+        //VersionApi api = new VersionApi(apiClient);
+        VersionApi api = new VersionApi(clientProvider.getApiClient());
 
         try {
             VersionInfo version = api.getCode().execute();
@@ -232,7 +271,8 @@ public class KubernetesApiService {
             String containerName,
             Integer tailLines) {
 
-        CoreV1Api api = new CoreV1Api(apiClient);
+        //CoreV1Api api = new CoreV1Api(apiClient);
+        CoreV1Api api = new CoreV1Api(clientProvider.getApiClient());
 
         try {
             return api.readNamespacedPodLog(podName, namespace)

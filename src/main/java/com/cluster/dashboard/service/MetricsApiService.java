@@ -1,5 +1,6 @@
 package com.cluster.dashboard.service;
 
+import com.cluster.dashboard.config.SessionKubernetesClientProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.ApiClient;
@@ -12,24 +13,23 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class MetricsApiService {
 
-    private static final String METRICS_GROUP =
-            "metrics.k8s.io";
+    private static final String METRICS_GROUP = "metrics.k8s.io";
 
-    private static final String METRICS_VERSION =
-            "v1beta1";
+    private static final String METRICS_VERSION = "v1beta1";
 
-    private static final String POD_RESOURCE =
-            "pods";
+    //private static final String POD_RESOURCE = "pods";
 
-    private final ApiClient apiClient;
+    //private final ApiClient apiClient;
+    private final SessionKubernetesClientProvider clientProvider;
 
     private final ObjectMapper objectMapper =
             new ObjectMapper();
 
     public JsonNode getPodMetrics(String namespace) {
 
+        //CustomObjectsApi api = new CustomObjectsApi(apiClient);
         CustomObjectsApi api =
-                new CustomObjectsApi(apiClient);
+                new CustomObjectsApi(clientProvider.getApiClient());
 
         try {
 
@@ -38,7 +38,7 @@ public class MetricsApiService {
                             METRICS_GROUP,
                             METRICS_VERSION,
                             namespace,
-                            POD_RESOURCE
+                            "pods"
                     ).execute();
 
             return objectMapper.valueToTree(response);
@@ -59,7 +59,7 @@ public class MetricsApiService {
     public JsonNode getNodeMetrics() {
 
         CustomObjectsApi api =
-                new CustomObjectsApi(apiClient);
+                new CustomObjectsApi(clientProvider.getApiClient());
 
         try {
 

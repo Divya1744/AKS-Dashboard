@@ -13,25 +13,4 @@ import java.io.IOException;
 @Configuration
 public class KubernetesClientConfig {
 
-
-    @Value("${kubeconfig.path}")
-    private String KUBECONFIG;
-    private static final String CONTEXT =
-            "octopus";
-
-    @Bean
-    public ApiClient kubernetesApiClient()      //creates a singleton api client
-            throws IOException {
-
-        KubeConfig kubeConfig =
-                KubeConfig.loadKubeConfig(
-                        new FileReader(KUBECONFIG)
-                );
-
-        kubeConfig.setContext(CONTEXT);
-
-        return ClientBuilder
-                .kubeconfig(kubeConfig)
-                .build();
-    }
 }

@@ -207,6 +207,7 @@ public class PodService {
                         new ContainerDetails(
                                 name,
                                 image,
+                                false,
                                 cpu,
                                 memory
                         )
@@ -304,6 +305,7 @@ public class PodService {
                         new ContainerDetails(
                                 name,
                                 image,
+                                true,
                                 cpu,
                                 memory
                         )
@@ -480,7 +482,7 @@ public class PodService {
         return image.substring(colonIndex + 1);
     }
 
-    private String getReadyState(V1Pod pod) {
+    /** private String getReadyState(V1Pod pod) {
 
         if (pod.getStatus() == null
                 || pod.getStatus().getContainerStatuses() == null) {
@@ -498,6 +500,58 @@ public class PodService {
 
             if (Boolean.TRUE.equals(containerStatus.getReady())) {
                 ready++;
+            }
+        }
+
+        return ready + "/" + total;
+    } */
+
+    private String getReadyState(V1Pod pod) {
+
+        if (pod.getStatus() == null) {
+            return "0/0";
+        }
+
+        int total = 0;
+        int ready = 0;
+
+        // Count regular containers
+        if (pod.getStatus().getContainerStatuses() != null) {
+
+            for (V1ContainerStatus containerStatus :
+                    pod.getStatus().getContainerStatuses()) {
+
+                total++;
+
+                if (Boolean.TRUE.equals(containerStatus.getReady())) {
+                    ready++;
+                }
+            }
+        }
+
+        // Count restartable init containers (sidecars)
+        if (pod.getStatus().getInitContainerStatuses() != null
+                && pod.getSpec() != null
+                && pod.getSpec().getInitContainers() != null) {
+
+            for (V1ContainerStatus initStatus :
+                    pod.getStatus().getInitContainerStatuses()) {
+
+                for (V1Container initContainer :
+                        pod.getSpec().getInitContainers()) {
+
+                    if (initContainer.getName().equals(initStatus.getName())
+                            && "Always".equals(initContainer.getRestartPolicy())) {
+
+                        total++;
+
+                        if (Boolean.TRUE.equals(initStatus.getReady())) {
+                            ready++;
+                        }
+
+                        break;
+                    }
+                }
             }
         }
 

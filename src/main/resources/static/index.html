@@ -22,11 +22,47 @@
         <img src="ptc-windchill-500x500.webp" alt="PTC Windchill Logo" class="brand-img" height="200px" width="200px"/>
       </div>
       <div class="brand-text">
-        <span class="brand-subtitle" id="nav-cluster-title" style="cursor: pointer;" title="Back to Cluster Overview">plm-rd-us</span>
+        <div class="cluster-nav-group">
+          <!-- Permanent Default Cluster -->
+          <span 
+            class="brand-subtitle cluster-nav-item is-default" 
+            id="nav-default-cluster" 
+            title="Switch back to Default Cluster (plm-rd-us)">
+            plm-rd-us
+          </span>
+
+          <!-- Active Switched Cluster (Rendered dynamically beside default) -->
+          <span 
+            class="brand-subtitle cluster-nav-item is-switched" 
+            id="nav-switched-cluster" 
+            style="display: none;" 
+            title="Current Session Cluster">
+            <!-- Injected via JS -->
+          </span>
+        </div>
       </div>
     </div>
 
+    
+
     <div class="navbar-actions">
+      <!-- Hidden single-file picker for Kubeconfig (explicitly disallowing folders) -->
+      <input 
+        type="file" 
+        id="kubeconfig-file-input" 
+        style="display: none;" 
+        accept=".yaml,.yml,.config,.conf,text/plain" 
+      />
+
+      <button id="btn-upload-kubeconfig" class="btn btn-secondary" title="Switch Kubeconfig (Session Scoped)">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span>Switch Cluster</span>
+      </button>
+
       <button id="btn-refresh" class="btn btn-secondary" title="Refresh Data">
         <svg class="icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
           <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
@@ -34,6 +70,7 @@
         <span>Refresh</span>
       </button>
     </div>
+
   </header>
 
   <!-- Main Application Layout -->

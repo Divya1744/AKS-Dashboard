@@ -1,4 +1,21 @@
-/* Buttons */
+/* ==========================================================================
+   TABLE OF CONTENTS
+   --------------------------------------------------------------------------
+   1. BUTTONS & CONTROLS
+   2. BADGES & STATUS PILLS
+   3. SIDEBAR NAVIGATION & CLUSTER PILL
+   4. DETAIL HEADER & SHARED SECTION HEADINGS
+   5. CLUSTER OVERVIEW (STAT CARDS & METRICS)
+   6. WORKLOAD TABLES & DRAWER ACCORDIONS (PODS & NODES)
+   7. CONTAINER CARDS (ACTIVE & COMPLETED INIT CONTAINERS)
+   8. NODE CAPACITY CHARTS
+   9. EMPTY, LOADING & ERROR STATES
+   10. ANIMATIONS & UTILITIES
+   ========================================================================== */
+
+/* ==========================================================================
+   1. BUTTONS & CONTROLS
+   ========================================================================== */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -40,7 +57,45 @@
   font-size: 0.75rem;
 }
 
-/* Badges */
+/* Light-Themed Logs Trigger Button */
+.btn-logs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.55rem;
+  background-color: #ffffff;
+  color: var(--text-secondary);
+  border: 1px solid var(--ptc-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.725rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-logs svg {
+  color: var(--ptc-green);
+  transition: transform 0.15s ease;
+}
+
+.btn-logs:hover {
+  background-color: var(--ptc-surface-hover);
+  color: var(--text-main);
+  border-color: var(--ptc-green);
+  box-shadow: 0 1px 3px rgba(94, 168, 19, 0.15);
+  transform: translateY(-1px);
+}
+
+.btn-logs:hover svg {
+  transform: translateX(1px);
+}
+
+/* ==========================================================================
+   2. BADGES & STATUS PILLS
+   ========================================================================== */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -81,41 +136,155 @@
   border: 1px solid var(--status-info-border); 
 }
 
-/* Cluster Pill in Sidebar */
-.cluster-pill {
+/* Pod Container Ready Counter (e.g., 1/1, 0/1) */
+.col-ready {
+  display: flex;
+  align-items: center;
+}
+
+.ready-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
+}
+
+.ready-badge.ready-ok {
+  background-color: #f1f5f9;
+  color: var(--text-secondary);
+}
+
+.ready-badge.ready-partial {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning);
+  border: 1px solid var(--status-warning-border);
+}
+
+.ready-badge.ready-not-ok {
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger);
+  border: 1px solid var(--status-danger-border);
+}
+
+/* Pod Restart Badges */
+.restart-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.15rem 0.45rem;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.775rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.restart-badge-zero {
+  background-color: transparent;
+  color: var(--text-secondary);
+}
+
+.restart-badge-warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning);
+  border: 1px solid var(--status-warning-border);
+}
+
+.restart-badge-critical {
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger);
+  border: 1px solid var(--status-danger-border);
+  animation: pulse-danger 2s infinite ease-in-out;
+}
+
+.restart-alert-icon {
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* Init Container Identifier Tags */
+.badge-init-tag {
+  background-color: #e2e8f0;
+  color: #475569;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.12rem 0.42rem;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.02em;
+}
+
+.badge-completed-status {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: var(--radius-sm);
+}
+
+/* ==========================================================================
+   3. SIDEBAR NAVIGATION & CLUSTER PILL
+   ========================================================================== */
+.cluster-pill,
+.cluster-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.2rem 0.5rem;
   background-color: #f1f5f9;
   border: 1px solid var(--ptc-border);
   border-radius: var(--radius-sm);
   width: fit-content;
-  transition: all 0.2s ease;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease-in-out;
 }
 
-.cluster-pill:hover {
+.cluster-pill:hover,
+.cluster-pill-btn:hover {
   background-color: var(--ptc-green-subtle);
   border-color: var(--ptc-green);
+  box-shadow: 0 1px 4px rgba(120, 190, 32, 0.2);
+  transform: translateY(-1px);
+}
+
+.cluster-pill-btn:active,
+.cluster-pill-btn.active {
+  background-color: var(--ptc-green-subtle);
+  border-color: var(--ptc-green);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .cluster-name {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.725rem;
   font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: -0.01em;
+  transition: color 0.15s ease;
+}
+
+.cluster-pill:hover .cluster-name,
+.cluster-pill-btn:hover .cluster-name,
+.cluster-pill-btn.active .cluster-name {
+  color: var(--text-main);
 }
 
 .cluster-pulse {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: var(--ptc-green);
-  box-shadow: 0 0 4px rgba(94, 168, 19, 0.4);
+  box-shadow: 0 0 4px rgba(94, 168, 19, 0.5);
 }
 
-/* Sidebar Navigation Items */
+/* Sidebar List Item */
 .namespace-item {
   display: flex;
   align-items: center;
@@ -148,7 +317,9 @@
   color: var(--ptc-green);
 }
 
-/* Top Detail Header */
+/* ==========================================================================
+   4. DETAIL HEADER & SHARED SECTION HEADINGS
+   ========================================================================== */
 .detail-header {
   display: flex;
   justify-content: space-between;
@@ -172,10 +343,35 @@
   align-items: center;
 }
 
-/* =========================================================
-   Cluster Stat Cards (3 Top Summary Cards)
-   ========================================================= */
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 
+.workloads-section {
+  margin-top: 1.5rem;
+}
+
+.workloads-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ==========================================================================
+   5. CLUSTER OVERVIEW (STAT CARDS & METRICS)
+   ========================================================================== */
 .stat-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -222,14 +418,7 @@
   margin-top: 0.25rem;
 }
 
-.text-success { color: var(--status-running); font-weight: 600; }
-.text-warning { color: var(--status-warning); font-weight: 600; }
-.text-danger { color: var(--status-danger); font-weight: 600; }
-
-/* =========================================================
-   Metrics Cards (CPU & Memory Utilization)
-   ========================================================= */
-
+/* CPU / Memory Overview Metric Cards */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -289,93 +478,9 @@
   font-family: var(--font-mono);
 }
 
-/* =========================================================
-   Cluster Nodes Table
-   ========================================================= */
-
-.workloads-section {
-  margin-top: 1.5rem;
-}
-
-.workloads-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.85rem;
-}
-
-.section-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-main);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.node-table-wrapper {
-  background: var(--ptc-surface);
-  border: 1px solid var(--ptc-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  overflow-x: auto;
-}
-
-.node-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.825rem;
-  text-align: left;
-}
-
-.node-table th {
-  background-color: #f8fafc;
-  padding: 0.75rem 1rem;
-  color: var(--text-secondary);
-  font-weight: 700;
-  font-size: 0.725rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--ptc-border);
-  white-space: nowrap;
-}
-
-.node-table td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--ptc-border-subtle);
-  white-space: nowrap;
-}
-
-.node-table tr:last-child td {
-  border-bottom: none;
-}
-
-.node-table tr:hover {
-  background-color: var(--ptc-surface-hover);
-}
-
-.node-cell-name {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--text-main);
-}
-
-.cell-mono {
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-}
-
-.text-muted-subtle {
-  color: var(--text-secondary);
-}
-
-/* =========================================================
-   Kubernetes Pod Workloads Table & Drawers
-   ========================================================= */
-
+/* ==========================================================================
+   6. WORKLOAD TABLES & DRAWER ACCORDIONS (PODS & NODES)
+   ========================================================================== */
 .k8s-pod-table {
   background-color: var(--ptc-surface);
   border: 1px solid var(--ptc-border);
@@ -384,6 +489,7 @@
   overflow: hidden;
 }
 
+/* Pod Table Row Grid */
 .pod-table-head,
 .pod-summary-row {
   display: grid;
@@ -393,36 +499,13 @@
   gap: 0.5rem;
 }
 
-/* Pod Ready State Badge */
-.col-ready {
-  display: flex;
+/* Node Table Row Grid */
+.node-row-grid {
+  display: grid;
+  grid-template-columns: 32px 3fr 110px 80px 130px 130px;
   align-items: center;
-}
-
-.ready-badge {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.15rem 0.45rem;
-  border-radius: var(--radius-sm);
-  line-height: 1.2;
-}
-
-.ready-badge.ready-ok {
-  background-color: #f1f5f9;
-  color: var(--text-secondary);
-}
-
-.ready-badge.ready-partial {
-  background-color: var(--status-warning-bg);
-  color: var(--status-warning);
-  border: 1px solid var(--status-warning-border);
-}
-
-.ready-badge.ready-not-ok {
-  background-color: var(--status-danger-bg);
-  color: var(--status-danger);
-  border: 1px solid var(--status-danger-border);
+  padding: 0 1rem;
+  gap: 0.5rem;
 }
 
 .pod-table-head {
@@ -461,6 +544,7 @@
   border-bottom: 1px dashed var(--ptc-border);
 }
 
+/* Row Columns */
 .col-expander {
   display: flex;
   align-items: center;
@@ -496,51 +580,32 @@
   text-overflow: ellipsis;
 }
 
+.col-node-pods {
+  display: flex;
+  align-items: center;
+}
+
 .col-age {
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
-.restart-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--radius-sm);
+.col-numeric {
   font-family: var(--font-mono);
-  font-size: 0.775rem;
+  font-size: 0.825rem;
+  color: var(--text-main);
+}
+
+.node-cell-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
   font-weight: 600;
-  line-height: 1.2;
+  color: var(--text-main);
 }
 
-.restart-badge-zero {
-  background-color: transparent;
-  color: var(--text-secondary);
-}
-
-.restart-badge-warning {
-  background-color: var(--status-warning-bg);
-  color: var(--status-warning);
-  border: 1px solid var(--status-warning-border);
-}
-
-.restart-badge-critical {
-  background-color: var(--status-danger-bg);
-  color: var(--status-danger);
-  border: 1px solid var(--status-danger-border);
-  animation: pulse-danger 2s infinite ease-in-out;
-}
-
-.restart-alert-icon {
-  font-size: 0.7rem;
-  font-weight: 800;
-}
-
-@keyframes pulse-danger {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
+/* Accordion Drawers */
 .pod-expansion-drawer {
   background-color: #fcfdfe;
   padding: 1rem 1.25rem 1.25rem 2.5rem;
@@ -566,6 +631,16 @@
   gap: 0.75rem;
 }
 
+.pod-table-empty {
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   7. CONTAINER CARDS (ACTIVE & COMPLETED INIT CONTAINERS)
+   ========================================================================== */
 .container-card {
   background-color: #ffffff;
   border: 1px solid var(--ptc-border);
@@ -583,6 +658,13 @@
   gap: 0.2rem;
   border-bottom: 1px solid var(--ptc-border-subtle);
   padding-bottom: 0.5rem;
+}
+
+.container-card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .container-title-line {
@@ -612,6 +694,7 @@
   color: var(--text-secondary);
 }
 
+/* Resource Utilization Mini Bars */
 .container-resources {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -669,72 +752,63 @@
   color: var(--text-secondary);
 }
 
-.pod-table-empty {
-  padding: 2rem;
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+/* Distinct Card for Completed Init Containers */
+.container-card.container-card-completed {
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  box-shadow: none;
+  opacity: 0.94;
+  transition: all 0.2s ease;
 }
 
-/* States */
-.state-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  text-align: center;
-  gap: 1rem;
-  color: var(--text-secondary);
+.container-card.container-card-completed:hover {
+  background-color: #ffffff;
+  border-color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  opacity: 1;
 }
 
-.state-icon {
-  color: #94a3b8;
+.container-card.container-card-completed .container-card-header {
+  border-bottom: none;
+  padding-bottom: 0.35rem;
 }
 
-.error-banner {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  padding: 1.5rem;
-  border-radius: var(--radius-lg);
-  max-width: 600px;
-  text-align: left;
-  box-shadow: var(--shadow-sm);
+.container-card.container-card-completed .container-name {
+  color: #334155;
+  font-weight: 600;
 }
 
-.rotate {
-  animation: spin 1s linear infinite;
+.status-indicator-dot.dot-completed {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #16a34a;
+  box-shadow: 0 0 4px rgba(22, 163, 74, 0.4);
+  display: inline-block;
 }
 
-@keyframes spin {
-  100% { transform: rotate(360deg); }
-}
-
-.node-row-grid {
-  display: grid;
-  grid-template-columns: 32px 3fr 110px 80px 130px 130px;
-  align-items: center;
-  padding: 0 1rem;
-  gap: 0.5rem;
-}
-
-.col-node-pods {
+.container-completed-notice {
   display: flex;
   align-items: center;
-}
-
-.font-mono {
+  gap: 0.45rem;
+  font-size: 0.725rem;
+  color: #64748b;
   font-family: var(--font-mono);
+  background-color: #edf2f7;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.75rem;
+  margin-top: 0.25rem;
 }
 
-.col-numeric {
-  font-family: var(--font-mono);
-  font-size: 0.825rem;
-  color: var(--text-main);
+.container-completed-notice svg {
+  color: #16a34a;
+  flex-shrink: 0;
 }
 
-/* Node Expandable Chart Cards */
+/* =========================================================
+   8. NODE CAPACITY CHARTS
+   ========================================================= */
 .node-chart-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -824,45 +898,129 @@
   font-weight: 700;
 }
 
-/* Container Top Row with Light-Themed Log Button */
-.container-card-top-row {
+/* ==========================================================================
+   9. EMPTY, LOADING & ERROR STATES
+   ========================================================================== */
+.state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  gap: 1rem;
+  color: var(--text-secondary);
+}
+
+.state-icon {
+  color: #94a3b8;
+}
+
+.error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  max-width: 600px;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================================================
+   Cluster Access Lockout Card (PTC Windchill Green Theme)
+   ========================================================================== */
+.access-lockout-container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  justify-content: center;
+  min-height: calc(100vh - 160px);
+  padding: 2rem;
 }
 
-.btn-logs {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.22rem 0.55rem;
-  background-color: #ffffff;
-  color: var(--text-secondary);
+.access-lockout-card {
+  background-color: var(--ptc-surface);
   border: 1px solid var(--ptc-border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 0.725rem;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: all 0.15s ease-in-out;
+  border-top: 4px solid var(--ptc-green);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  max-width: 580px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
 }
 
-.btn-logs svg {
+.access-lockout-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: var(--ptc-green-subtle);
   color: var(--ptc-green);
-  transition: transform 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ptc-green-border);
 }
 
-.btn-logs:hover {
-  background-color: var(--ptc-surface-hover);
+.access-lockout-header h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
   color: var(--text-main);
-  border-color: var(--ptc-green);
-  box-shadow: 0 1px 3px rgba(94, 168, 19, 0.15);
-  
+  letter-spacing: -0.01em;
 }
 
-.btn-logs:hover svg {
-  transform: translateX(1px);
+.access-lockout-body p {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
+
+.access-lockout-actions {
+  margin-top: 0.5rem;
+}
+
+.badge-access-status {
+  background-color: var(--ptc-green-subtle);
+  color: var(--ptc-green);
+  border: 1px solid var(--ptc-green-border);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Disabled state for Action Buttons */
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   10. ANIMATIONS & UTILITIES
+   ========================================================================== */
+.rotate {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-danger {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.text-success { color: var(--status-running); font-weight: 600; }
+.text-warning { color: var(--status-warning); font-weight: 600; }
+.text-danger { color: var(--status-danger); font-weight: 600; }
+.text-muted-subtle { color: var(--text-secondary); }
+.font-mono { font-family: var(--font-mono); }
+.cell-mono { font-family: var(--font-mono); font-size: 0.8rem; }

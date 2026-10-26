@@ -27,7 +27,7 @@ const Components = {
    */
   renderClusterView(clusterData) {
     const {
-      clusterName = 'plm-rd-us',
+      clusterName = 'Unknown',
       kubernetesVersion = 'Unknown',
       totalNodes = 0,
       readyNodes = 0,
@@ -58,8 +58,6 @@ const Components = {
           <h1>Cluster: ${clusterName}</h1>
           <div class="meta-pill-group">
             <span class="badge badge-info">K8s: ${kubernetesVersion}</span>
-           
-           
           </div>
         </div>
       </section>
@@ -80,8 +78,7 @@ const Components = {
               totalPods > 0 && runningPods === totalPods
                 ? '<span class="text-success">All pods operational</span>'
                 : `
-                  <span class="text-success">${runningPods} Running</span>
-                  ${pendingPods > 0 ? `&bull; <span class="text-warning">${pendingPods} Pending</span>` : ''}
+                  <span class="text-success">${runningPods} Running</span>${pendingPods > 0 ? `&bull; <span class="text-warning">${pendingPods} Pending</span>` : ''}
                   ${failedPods > 0 ? `&bull; <span class="text-danger">${failedPods} Failed</span>` : ''}
                 `.trim()
             }
@@ -160,9 +157,6 @@ const Components = {
     `;
   },
 
-  /**
-   * Renders a single compact Node row with an expandable resource chart drawer
-   */
   renderNodeRow(node, index) {
     const isReady = node.status === 'Ready';
     const statusBadge = isReady ? 'badge-running' : 'badge-failed';
@@ -178,7 +172,6 @@ const Components = {
     const cpuBarColor = cpuPct > 85 ? 'var(--status-danger)' : (cpuPct > 70 ? 'var(--status-warning)' : 'var(--ptc-green)');
     const memBarColor = memPct > 85 ? 'var(--status-danger)' : (memPct > 70 ? 'var(--status-warning)' : 'var(--ptc-green)');
 
-    // Pod count fallback (defaults to node.podCount if available)
     const podCountDisplay = (node.podCount !== undefined && node.podCount !== null) ? node.podCount : '—';
 
     return `
@@ -218,7 +211,6 @@ const Components = {
             </div>
             
             <div class="node-chart-grid">
-              <!-- CPU Telemetry Chart Card -->
               <div class="node-chart-card">
                 <div class="chart-header">
                   <div class="chart-title">CPU</div>
@@ -243,7 +235,6 @@ const Components = {
                 </div>
               </div>
 
-              <!-- Memory Telemetry Chart Card -->
               <div class="node-chart-card">
                 <div class="chart-header">
                   <div class="chart-title">Memory</div>
@@ -274,7 +265,7 @@ const Components = {
     `;
   },
 
-  renderDetailView(data) {
+  renderDetailView(data, clusterName) {
     const name = data.name || 'Unknown';
     const podCount = data.podCount || 0;
     const cpu = data.cpu || {};
@@ -287,7 +278,6 @@ const Components = {
     const memUtil = (memory.utilization || 0).toFixed(1);
     const memProgress = Math.min(memory.utilization || 0, 100);
 
-    // Step 1: Conditionally render Launch Windchill button only if windchillUrl exists and is non-empty
     const windchillBtnHtml = (windchillUrl && windchillUrl.trim() !== '') ? `
       <a href="${windchillUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" title="Launch Windchill application">
         <span>Launch Windchill</span>
@@ -300,7 +290,7 @@ const Components = {
     ` : '';
 
     const podRowsHtml = pods.length > 0 
-      ? pods.map((pod, idx) => Components.renderPodRow(pod, idx, name)).join('')
+      ? pods.map((pod, idx) => Components.renderPodRow(pod, idx, name, clusterName)).join('')
       : '<div class="pod-table-empty">No pods found in this namespace.</div>';
 
     return `
@@ -374,7 +364,7 @@ const Components = {
     `;
   },
 
-  renderPodRow(pod, index, currentNamespace) {
+  renderPodRow(pod, index, currentNamespace, clusterName) {
     const isRunning = pod.status === 'Running';
     const statusBadgeClass = isRunning ? 'badge-running' : pod.status === 'Pending' ? 'badge-pending' : 'badge-failed';
     const restarts = pod.restarts || 0;
@@ -382,16 +372,16 @@ const Components = {
       ? 'restart-badge-critical' 
       : (restarts > 0 ? 'restart-badge-warning' : 'restart-badge-zero');
     
-    // Check ready state (e.g., "1/1", "0/1")
     const readyState = pod.ready || '0/0';
     const [readyCount, totalCount] = readyState.split('/').map(v => parseInt(v, 10));
     const isFullyReady = totalCount > 0 && readyCount === totalCount;
     const readyClass = isFullyReady ? 'ready-ok' : (readyCount === 0 ? 'ready-not-ok' : 'ready-partial');
 
     const containers = pod.containers || [];
-    // Pass namespace and pod name to each container card
-    const containerCardsHtml = containers.map(c => Components.renderContainerDetail(c, pod.name, currentNamespace)).join('');
-
+    const containerCardsHtml = containers.map(c => 
+      Components.renderContainerDetail(c, pod.name, currentNamespace, clusterName)
+    ).join('');
+  
     return `
       <div class="pod-row-group" id="pod-row-group-${index}">
         <div class="pod-summary-row" onclick="App.togglePodRow(${index})">
@@ -437,20 +427,63 @@ const Components = {
     `;
   },
 
-  renderContainerDetail(container, podName, namespace) {
+  renderContainerDetail(container, podName, namespace, clusterName = 'current') {
+    const isInitContainer = container.isInit === true || container.isInit === 'true' || container.isInit === 1;
+    const logUrl = `logs.html?cluster=${encodeURIComponent(clusterName)}&namespace=${encodeURIComponent(namespace)}&pod=${encodeURIComponent(podName)}&container=${encodeURIComponent(container.name)}`;
+
     const cpu = container.cpu || {};
-    const mem = container.memory || {};
+    const memory = container.memory || {};
 
     const cpuPct = Math.max(0, cpu.utilization || 0);
-    const memPct = Math.max(0, memoryPctSafe(mem.utilization));
+    const memPct = Math.max(0, memoryPctSafe(memory.utilization));
     const cpuWidth = Math.min(cpuPct, 100);
     const memWidth = Math.min(memPct, 100);
 
     const cpuBarColor = cpuPct > 90 ? 'var(--status-danger)' : (cpuPct > 75 ? 'var(--status-warning)' : 'var(--ptc-green)');
     const memBarColor = memPct > 90 ? 'var(--status-danger)' : (memPct > 75 ? 'var(--status-warning)' : 'var(--ptc-green)');
 
-    // Link to logs.html in a new window/tab
-    const logUrl = `logs.html?cluster=plm-rd-us&namespace=${encodeURIComponent(namespace)}&pod=${encodeURIComponent(podName)}&container=${encodeURIComponent(container.name)}`;
+    const isZeroUsage = (!cpu.usage || cpu.usage === '0m') && 
+                        (!memory.usage || memory.usage === '0.00Gi' || memory.usage === '0Gi') && 
+                        cpuPct === 0 && memPct === 0;
+
+    const isCompletedInit = isInitContainer && isZeroUsage;
+
+    if (isCompletedInit) {
+      return `
+        <div class="container-card container-card-completed">
+          <div class="container-card-header">
+            <div class="container-card-top-row">
+              <div class="container-title-line">
+                <svg class="icon-completed" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <span class="container-name">${container.name}</span>
+                <span class="badge-init-tag">Init</span>
+                <span class="badge-completed-status">✓ Completed</span>
+              </div>
+
+              <a href="${logUrl}" target="_blank" rel="noopener noreferrer" class="btn-logs" title="Open init startup logs in terminal">
+                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none">
+                  <polyline points="4 17 10 11 4 5"></polyline>
+                  <line x1="12" y1="19" x2="20" y2="19"></line>
+                </svg>
+                <span>Logs</span>
+              </a>
+            </div>
+
+            <div class="container-image-subtle" title="${container.image || 'None'}">
+              <span class="image-label">Tag:</span> ${container.image || 'None'}
+            </div>
+          </div>
+
+          <div class="container-completed-notice">
+            <span class="terminated-indicator"></span>
+            <span>Task completed &bull; Terminated (Exit 0) &bull; Resources released</span>
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div class="container-card">
@@ -464,6 +497,7 @@ const Components = {
                 <line x1="6" y1="18" x2="6.01" y2="18"></line>
               </svg>
               <span class="container-name">${container.name}</span>
+              ${isInitContainer ? '<span class="badge badge-info" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">Init &bull; Running</span>' : ''}
             </div>
 
             <a href="${logUrl}" target="_blank" rel="noopener noreferrer" class="btn-logs" title="Open container logs in terminal window">
@@ -498,14 +532,14 @@ const Components = {
           <div class="resource-block">
             <div class="resource-block-header">
               <span class="res-type">Memory</span>
-              <span class="res-usage-pct">${mem.usage || '0Gi'} (${memPct.toFixed(1)}%)</span>
+              <span class="res-usage-pct">${memory.usage || '0Gi'} (${memPct.toFixed(1)}%)</span>
             </div>
             <div class="mini-bar-track">
               <div class="mini-bar-fill" style="width: ${memWidth}%; background-color: ${memBarColor};"></div>
             </div>
             <div class="resource-specs">
-              <span>Req: <strong>${mem.request || '0Gi'}</strong></span>
-              <span>Limit: <strong>${mem.limit || '0Gi'}</strong></span>
+              <span>Req: <strong>${memory.request || '0Gi'}</strong></span>
+              <span>Limit: <strong>${memory.limit || '0Gi'}</strong></span>
             </div>
           </div>
         </div>
@@ -554,6 +588,38 @@ const Components = {
           <div style="margin-top: 1rem;">
             <button class="btn btn-secondary btn-sm" onclick="App.refresh()">Retry Request</button>
           </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderAccessDeniedState(accessData) {
+    const status = accessData.status || 'RESTRICTED';
+    const code = accessData.code || 'CLUSTER_ACCESS_DENIED';
+    const message = accessData.message || 'The configured kubeconfig does not have sufficient permissions to monitor the cluster.';
+
+    return `
+      <div class="access-lockout-container">
+        <div class="access-lockout-card">
+          <div class="access-lockout-icon">
+            <svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" stroke-width="2" fill="none">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          
+          <div class="access-lockout-header">
+            <div class="meta-pill-group" style="justify-content: center; margin-bottom: 0.5rem;">
+              <span class="badge badge-access-status">${status}</span>
+              <span class="badge badge-muted font-mono">${code}</span>
+            </div>
+            <h2>Cluster Access Restricted</h2>
+          </div>
+
+          <div class="access-lockout-body">
+            <p>${message}</p>
+          </div>
+
         </div>
       </div>
     `;

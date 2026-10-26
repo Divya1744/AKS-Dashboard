@@ -146,3 +146,83 @@
   padding: 2rem 2.5rem;
   background-color: var(--ptc-dark);
 }
+
+/* Dual Cluster Navigation in Navbar */
+.cluster-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.cluster-nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+/* Default Cluster Styling */
+.cluster-nav-item.is-default {
+  background-color: #f1f5f9;
+  border-color: var(--ptc-border);
+  color: var(--text-secondary);
+}
+
+.cluster-nav-item.is-default:hover {
+  background-color: var(--ptc-surface-hover);
+  color: var(--text-main);
+  border-color: #cbd5e1;
+}
+
+/* Active Highlight when the current view is the default cluster */
+.cluster-nav-item.is-default.active {
+  background-color: var(--ptc-green-subtle);
+  border-color: var(--ptc-green);
+  color: var(--ptc-green);
+}
+
+/* Switched / Session Cluster Styling */
+.cluster-nav-item.is-switched {
+  background-color: var(--ptc-green-subtle);
+  border-color: var(--ptc-green-border);
+  color: var(--ptc-green);
+  box-shadow: 0 1px 3px rgba(94, 168, 19, 0.15);
+}
+
+.cluster-nav-item.is-switched::before {
+  content: "•";
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--ptc-green);
+}
+
+.cluster-nav-item.is-switched:hover {
+  background-color: rgba(94, 168, 19, 0.18);
+  border-color: var(--ptc-green);
+}
+
+/* Close/Revert 'x' button inside switched cluster tag */
+.cluster-nav-item .btn-revert-cluster {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--ptc-green);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.cluster-nav-item .btn-revert-cluster:hover {
+  opacity: 1;
+}
